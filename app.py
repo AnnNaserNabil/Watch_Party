@@ -39,12 +39,19 @@ def fetch_movies(genre_ids=None, actor_ids=None, director_ids=None):
         "language": "en-US",
         "sort_by": "popularity.desc",
         "include_adult": False,
-        "with_genres": ",".join(map(str, genre_ids)) if genre_ids else None,
-        "with_cast": ",".join(map(str, actor_ids)) if actor_ids else None,
-        "with_crew": ",".join(map(str, director_ids)) if director_ids else None,
     }
-    # Remove None values from params
-    params = {k: v for k, v in params.items() if v is not None}
+
+    # Add genre IDs if provided
+    if genre_ids:
+        params["with_genres"] = ",".join(map(str, genre_ids))
+
+    # Add actor IDs if provided
+    if actor_ids:
+        params["with_cast"] = ",".join(map(str, actor_ids))
+
+    # Add director IDs if provided
+    if director_ids:
+        params["with_crew"] = ",".join(map(str, director_ids))
 
     url = f"{TMDB_BASE_URL}/discover/movie"
     response = requests.get(url, params=params)
@@ -58,8 +65,11 @@ def main():
     st.title("Movie Recommendation System")
     st.write("Enter your preferences to get movie recommendations.")
 
+    # Fetch genres from TMDB
     genres = fetch_genres()
     genre_options = list(genres.keys())
+
+    # Map moods to genres
     mood_to_genre = {
         "Happy": "Comedy",
         "Sad": "Drama",
@@ -69,55 +79,7 @@ def main():
     }
     mood_options = list(mood_to_genre.keys())
 
+    # User inputs
     selected_genres = st.multiselect("Select Genres", genre_options)
     selected_moods = st.multiselect("Select Moods", mood_options)
-    actor_query = st.text_input("Search for Actor")
-    director_query = st.text_input("Search for Director")
-
-    actor_ids = []
-    if actor_query:
-        actor_search_results = search_person(actor_query)
-        if actor_search_results:
-            selected_actor = st.selectbox("Select Actor", list(actor_search_results.keys()))
-            actor_ids.append(actor_search_results[selected_actor])
-        else:
-            st.warning("No actors found with that name.")
-
-    director_ids = []
-    if director_query:
-        director_search_results = search_person(director_query)
-        if director_search_results:
-            selected_director = st.selectbox("Select Director", list(director_search_results.keys()))
-            director_ids.append(director_search_results[selected_director])
-        else:
-            st.warning("No directors found with that name.")
-
-    if st.button("Get Recommendations"):
-        genre_ids = [genres[genre] for genre in selected_genres if genre in genres]
-        for mood in selected_moods:
-            genre_name = mood_to_genre.get(mood)
-            if genre_name and genre_name in genres:
-                genre_ids.append(genres[genre_name])
-
-        # Ensure genre_ids are unique
-        genre_ids = list(set(genre_ids))
-
-        if not genre_ids and not actor_ids and not director_ids:
-            st.warning("Please provide at least one genre, mood, actor, or director to get recommendations.")
-        else:
-            movies = fetch_movies(genre_ids=genre_ids, actor_ids=actor_ids, director_ids=director_ids)
-
-            if movies:
-                st.write("Here are your movie recommendations:")
-                for movie in movies[:10]:
-                    st.write(f"**{movie['title']}** ({movie['release_date'][:4] if movie.get('release_date') else 'N/A'})")
-                    st.write(f"Overview: {movie.get('overview', 'No overview available.')}")
-                    st.write(f"Rating: {movie.get('vote_average', 'N/A')}")
-                    if movie.get("poster_path"):
-                        st.image(f"https://image.tmdb.org/t/p/w500{movie['poster_path']}", width=200)
-                    st.write("---")
-            else:
-                st.warning("No movies found matching your preferences.")
-
-if __name__ == "__main__":
-    main()
+    actor_query =
