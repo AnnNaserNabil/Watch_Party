@@ -93,25 +93,31 @@ def main():
             st.warning("No directors found with that name.")
 
     if st.button("Get Recommendations"):
-        genre_ids = [genres[genre] for genre in selected_genres]
+        genre_ids = [genres[genre] for genre in selected_genres if genre in genres]
         for mood in selected_moods:
             genre_name = mood_to_genre.get(mood)
             if genre_name and genre_name in genres:
                 genre_ids.append(genres[genre_name])
 
-        movies = fetch_movies(genre_ids=genre_ids, actor_ids=actor_ids, director_ids=director_ids)
+        # Ensure genre_ids are unique
+        genre_ids = list(set(genre_ids))
 
-        if movies:
-            st.write("Here are your movie recommendations:")
-            for movie in movies[:10]:
-                st.write(f"**{movie['title']}** ({movie['release_date'][:4] if movie.get('release_date') else 'N/A'})")
-                st.write(f"Overview: {movie.get('overview', 'No overview available.')}")
-                st.write(f"Rating: {movie.get('vote_average', 'N/A')}")
-                if movie.get("poster_path"):
-                    st.image(f"https://image.tmdb.org/t/p/w500{movie['poster_path']}", width=200)
-                st.write("---")
+        if not genre_ids and not actor_ids and not director_ids:
+            st.warning("Please provide at least one genre, mood, actor, or director to get recommendations.")
         else:
-            st.warning("No movies found matching your preferences.")
+            movies = fetch_movies(genre_ids=genre_ids, actor_ids=actor_ids, director_ids=director_ids)
+
+            if movies:
+                st.write("Here are your movie recommendations:")
+                for movie in movies[:10]:
+                    st.write(f"**{movie['title']}** ({movie['release_date'][:4] if movie.get('release_date') else 'N/A'})")
+                    st.write(f"Overview: {movie.get('overview', 'No overview available.')}")
+                    st.write(f"Rating: {movie.get('vote_average', 'N/A')}")
+                    if movie.get("poster_path"):
+                        st.image(f"https://image.tmdb.org/t/p/w500{movie['poster_path']}", width=200)
+                    st.write("---")
+            else:
+                st.warning("No movies found matching your preferences.")
 
 if __name__ == "__main__":
     main()
