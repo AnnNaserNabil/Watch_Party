@@ -117,12 +117,19 @@ def fetch_movie_details(movie_id):
         # Find the best-written review (highest-rated review)
         best_review = None
         if reviews:
-            best_review = max(reviews, key=lambda x: x.get("author_details", {}).get("rating", 0))
+            # Filter out reviews without ratings or author_details
+            valid_reviews = [
+                review for review in reviews
+                if review.get("author_details", {}).get("rating") is not None
+            ]
+            if valid_reviews:
+                best_review = max(valid_reviews, key=lambda x: x["author_details"]["rating"])
 
         return top_actors, director, best_review
     except requests.exceptions.RequestException as e:
         st.error(f"Failed to fetch movie details: {e}")
         return None, None, None
+
 
 def main():
     # Title and header
