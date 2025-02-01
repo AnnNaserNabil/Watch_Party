@@ -1,6 +1,7 @@
 import streamlit as st
 import requests
 import os
+from datetime import datetime
 
 # Load TMDB API key from environment variable
 TMDB_API_KEY = os.getenv("TMDB_API_KEY")
@@ -10,7 +11,7 @@ if not TMDB_API_KEY:
 
 TMDB_BASE_URL = "https://api.themoviedb.org/3"
 
-# Custom CSS for beautification
+# Custom CSS for professional styling
 st.markdown(
     """
     <style>
@@ -20,6 +21,7 @@ st.markdown(
         border-radius: 5px;
         padding: 10px 20px;
         font-size: 16px;
+        transition: background-color 0.3s ease;
     }
     .stButton button:hover {
         background-color: #45a049;
@@ -27,32 +29,46 @@ st.markdown(
     .movie-card {
         padding: 20px;
         border-radius: 10px;
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
         margin-bottom: 20px;
-        background-color: #ffffff;  /* White background */
-        color: #333333;  /* Dark gray text */
+        background-color: #ffffff;
+        color: #333333;
     }
     .movie-card h3 {
         margin-top: 0;
-        color: #4CAF50;  /* Green header */
+        color: #4CAF50;
+        font-size: 24px;
     }
     .movie-card p {
-        color: #333333;  /* Dark gray text */
+        color: #555555;
+        font-size: 16px;
     }
     .movie-card img {
         border-radius: 10px;
         margin-bottom: 15px;
+        width: 100%;
+        max-width: 200px;
     }
     .stHeader {
         font-size: 36px;
         font-weight: bold;
-        color: #4CAF50;  /* Green header */
+        color: #4CAF50;
+        text-align: center;
+        margin-bottom: 20px;
+    }
+    .footer {
+        text-align: center;
+        padding: 10px;
+        font-size: 14px;
+        color: #777777;
+        margin-top: 30px;
     }
     </style>
     """,
     unsafe_allow_html=True,
 )
 
+@st.cache_data
 def fetch_genres():
     """Fetch list of genres from TMDB API."""
     url = f"{TMDB_BASE_URL}/genre/movie/list"
@@ -61,9 +77,10 @@ def fetch_genres():
         genres = response.json().get("genres", [])
         return {g["name"]: g["id"] for g in genres}
     else:
-        st.error("Failed to fetch genres.")
+        st.error("Failed to fetch genres. Please try again later.")
         return {}
 
+@st.cache_data
 def fetch_movies(genre_ids=None, release_date_gte=None, release_date_lte=None):
     """Fetch movies based on genre IDs and release date range."""
     params = {
@@ -88,9 +105,10 @@ def fetch_movies(genre_ids=None, release_date_gte=None, release_date_lte=None):
     if response.status_code == 200:
         return response.json().get("results", [])
     else:
-        st.error("Failed to fetch movie recommendations.")
+        st.error("Failed to fetch movie recommendations. Please check your filters and try again.")
         return []
 
+@st.cache_data
 def fetch_movie_details(movie_id):
     """Fetch additional details (credits and reviews) for a movie."""
     credits_url = f"{TMDB_BASE_URL}/movie/{movie_id}/credits"
@@ -129,6 +147,16 @@ def main():
     st.markdown("<h1 class='stHeader'>🎬 Movie Recommendation System</h1>", unsafe_allow_html=True)
     st.write("Welcome to the ultimate movie recommendation system! Select your preferences below and get personalized movie recommendations.")
 
+    # About section
+    with st.expander("About This App"):
+        st.write("""
+            This app uses the **TMDB API** to provide personalized movie recommendations based on your selected genres, moods, and movie eras.
+            - **Genres**: Choose from a wide range of movie genres.
+            - **Moods**: Select your current mood to get tailored recommendations.
+            - **Movie Eras**: Explore movies from specific decades.
+            Developed by [Ann Naser Nabil](https://github.com/AnnNaserNabil).
+        """)
+
     # Fetch genres from TMDB
     genres = fetch_genres()
     genre_options = list(genres.keys())
@@ -162,7 +190,7 @@ def main():
     selected_moods = st.sidebar.multiselect("Select Moods 😃", mood_options)
     selected_eras = st.sidebar.multiselect("Select Movie Era 📅", era_options)
 
-    # Developer URL in the sidebar
+    # Developer info in the sidebar
     st.sidebar.markdown("---")
     st.sidebar.markdown("### Developed By")
     st.sidebar.markdown("[Ann Naser Nabil](https://github.com/AnnNaserNabil)")
@@ -226,6 +254,9 @@ def main():
                         )
             else:
                 st.warning("No movies found matching your preferences.")
+
+    # Footer
+    st.markdown("<div class='footer'>© 2023 Movie Recommendation System. All rights reserved.</div>", unsafe_allow_html=True)
 
 if __name__ == "__main__":
     main()
