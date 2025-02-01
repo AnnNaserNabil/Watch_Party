@@ -133,8 +133,8 @@ def fetch_movie_details(movie_id):
 
 def main():
     # Title and header
-    st.markdown("<h1 class='stHeader'>🎬 Movie Recommendation System</h1>", unsafe_allow_html=True)
-    st.write("Welcome to the ultimate movie recommendation system! Select your preferences below and get personalized movie recommendations.")
+    st.markdown("<h1 class='stHeader'>🎬 Let's Watch</h1>", unsafe_allow_html=True)
+    st.write("The ultimate movie recommendation system! /n Select your preferences below and get personalized movie recommendations.")
 
     # Fetch genres from TMDB
     genres = fetch_genres()
