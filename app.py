@@ -90,6 +90,39 @@ def fetch_movies(genre_ids=None, release_date_gte=None, release_date_lte=None):
         st.error("Failed to fetch movie recommendations.")
         return []
 
+def fetch_movie_details(movie_id):
+    """Fetch additional details (credits and reviews) for a movie."""
+    credits_url = f"{TMDB_BASE_URL}/movie/{movie_id}/credits"
+    reviews_url = f"{TMDB_BASE_URL}/movie/{movie_id}/reviews"
+
+    # Fetch credits
+    credits_response = requests.get(credits_url, params={"api_key": TMDB_API_KEY})
+    if credits_response.status_code != 200:
+        st.error(f"Failed to fetch credits for movie ID {movie_id}.")
+        return None, None
+
+    # Fetch reviews
+    reviews_response = requests.get(reviews_url, params={"api_key": TMDB_API_KEY})
+    if reviews_response.status_code != 200:
+        st.error(f"Failed to fetch reviews for movie ID {movie_id}.")
+        return None, None
+
+    credits = credits_response.json()
+    reviews = reviews_response.json().get("results", [])
+
+    # Extract top 5 actors and director
+    cast = credits.get("cast", [])
+    crew = credits.get("crew", [])
+    top_actors = [actor["name"] for actor in cast[:5]]  # Top 5 actors
+    director = next((member["name"] for member in crew if member["job"] == "Director"), None)
+
+    # Find the best-written review (highest-rated review)
+    best_review = None
+    if reviews:
+        best_review = max(reviews, key=lambda x: x.get("author_details", {}).get("rating", 0))
+
+    return top_actors, director, best_review
+
 def main():
     # Title and header
     st.markdown("<h1 class='stHeader'>🎬 Movie Recommendation System</h1>", unsafe_allow_html=True)
@@ -168,12 +201,18 @@ def main():
                 st.success("Here are your movie recommendations:")
                 for movie in list(unique_movies)[:10]:  # Show top 10 results
                     with st.container():
+                        # Fetch additional details (top 5 actors, director, and best review)
+                        top_actors, director, best_review = fetch_movie_details(movie["id"])
+
                         st.markdown(
                             f"""
                             <div class="movie-card">
                                 <h3>{movie['title']} ({movie['release_date'][:4] if movie.get('release_date') else 'N/A'})</h3>
                                 <p><strong>Overview:</strong> {movie.get('overview', 'No overview available.')}</p>
                                 <p><strong>Rating:</strong> ⭐ {movie.get('vote_average', 'N/A')}</p>
+                                <p><strong>Top 5 Actors:</strong> {', '.join(top_actors) if top_actors else 'N/A'}</p>
+                                <p><strong>Director:</strong> {director if director else 'N/A'}</p>
+                                <p><strong>Best Review:</strong> {best_review['content'] if best_review else 'No reviews available.'}</p>
                                 {f"<img src='https://image.tmdb.org/t/p/w500{movie['poster_path']}' width='200' />" if movie.get("poster_path") else ""}
                             </div>
                             """,
