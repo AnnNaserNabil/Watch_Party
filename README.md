@@ -90,7 +90,8 @@ Easy to Use: A simple and intuitive interface makes it accessible for everyone.
 
 
 🔗 Links
- [GitHub Repository:}(https://github.com/AnnNaserNabil/Watch_Party)
+
+ [GitHub Repository](https://github.com/AnnNaserNabil/Watch_Party)
 
  [Live Demo:](https://letswatch.streamlit.app/)
 
