@@ -20,7 +20,7 @@ def search_person(query):
     """Search for an actor or director based on user input."""
     url = f"{TMDB_BASE_URL}/search/person"
     response = requests.get(url, params={"api_key": TMDB_API_KEY, "query": query}).json()
-    return [person["name"] for person in response.get("results", [])]
+    return {person["name"]: person["id"] for person in response.get("results", [])}
 
 def fetch_movies(genre_id=None, actor_id=None, director_id=None):
     """Fetch movies based on genre, actor, or director ID."""
@@ -47,19 +47,19 @@ def main():
     
     genres = fetch_genres()
     genre = st.selectbox("Select Genre", [""] + list(genres.keys()))
+    
     actor_query = st.text_input("Search for an Actor")
-    director_query = st.text_input("Search for a Director")
-    
-    actor_options = search_person(actor_query) if actor_query else []
-    director_options = search_person(director_query) if director_query else []
-    
+    actor_options = list(search_person(actor_query).keys()) if actor_query else []
     actor = st.selectbox("Select Actor", [""] + actor_options)
+    
+    director_query = st.text_input("Search for a Director")
+    director_options = list(search_person(director_query).keys()) if director_query else []
     director = st.selectbox("Select Director", [""] + director_options)
     
     if st.button("Get Recommendations"):
         genre_id = genres.get(genre)
-        actor_id = search_person(actor)[0] if actor else None
-        director_id = search_person(director)[0] if director else None
+        actor_id = search_person(actor).get(actor) if actor else None
+        director_id = search_person(director).get(director) if director else None
         
         movies = fetch_movies(genre_id=genre_id, actor_id=actor_id, director_id=director_id)
         
