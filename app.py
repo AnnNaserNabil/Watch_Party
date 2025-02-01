@@ -82,4 +82,55 @@ def main():
     # User inputs
     selected_genres = st.multiselect("Select Genres", genre_options)
     selected_moods = st.multiselect("Select Moods", mood_options)
-    actor_query =
+    actor_query = st.text_input("Search for Actor")
+    director_query = st.text_input("Search for Director")
+
+    # Handle actor search
+    actor_ids = []
+    if actor_query:
+        actor_search_results = search_person(actor_query)
+        if actor_search_results:
+            selected_actor = st.selectbox("Select Actor", list(actor_search_results.keys()))
+            actor_ids.append(actor_search_results[selected_actor])
+        else:
+            st.warning("No actors found with that name.")
+
+    # Handle director search
+    director_ids = []
+    if director_query:
+        director_search_results = search_person(director_query)
+        if director_search_results:
+            selected_director = st.selectbox("Select Director", list(director_search_results.keys()))
+            director_ids.append(director_search_results[selected_director])
+        else:
+            st.warning("No directors found with that name.")
+
+    # Fetch recommendations when the button is clicked
+    if st.button("Get Recommendations"):
+        # Map selected moods to genre IDs
+        genre_ids = [genres[genre] for genre in selected_genres if genre in genres]
+        for mood in selected_moods:
+            genre_name = mood_to_genre.get(mood)
+            if genre_name and genre_name in genres:
+                genre_ids.append(genres[genre_name])
+
+        # Ensure genre IDs are unique
+        genre_ids = list(set(genre_ids))
+
+        # Fetch movies based on inputs
+        movies = fetch_movies(genre_ids=genre_ids, actor_ids=actor_ids, director_ids=director_ids)
+
+        if movies:
+            st.write("Here are your movie recommendations:")
+            for movie in movies[:10]:  # Show top 10 results
+                st.write(f"**{movie['title']}** ({movie['release_date'][:4] if movie.get('release_date') else 'N/A'})")
+                st.write(f"Overview: {movie.get('overview', 'No overview available.')}")
+                st.write(f"Rating: {movie.get('vote_average', 'N/A')}")
+                if movie.get("poster_path"):
+                    st.image(f"https://image.tmdb.org/t/p/w500{movie['poster_path']}", width=200)
+                st.write("---")
+        else:
+            st.warning("No movies found matching your preferences.")
+
+if __name__ == "__main__":
+    main()
