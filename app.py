@@ -207,13 +207,14 @@ def main():
                         st.markdown(
                             f"""
                             <div class="movie-card">
+                                {f"<img src='https://image.tmdb.org/t/p/w500{movie['poster_path']}' width='200' />" if movie.get("poster_path") else ""}
                                 <h3>{movie['title']} ({movie['release_date'][:4] if movie.get('release_date') else 'N/A'})</h3>
                                 <p><strong>Overview:</strong> {movie.get('overview', 'No overview available.')}</p>
                                 <p><strong>Rating:</strong> ⭐ {movie.get('vote_average', 'N/A')}</p>
                                 <p><strong>Top 5 Actors:</strong> {', '.join(top_actors) if top_actors else 'N/A'}</p>
                                 <p><strong>Director:</strong> {director if director else 'N/A'}</p>
                                 <p><strong>Best Review:</strong> {best_review['content'] if best_review else 'No reviews available.'}</p>
-                                {f"<img src='https://image.tmdb.org/t/p/w500{movie['poster_path']}' width='200' />" if movie.get("poster_path") else ""}
+                                
                             </div>
                             """,
                             unsafe_allow_html=True,
