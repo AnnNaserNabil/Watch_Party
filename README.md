@@ -65,7 +65,7 @@ Ensure you have Python installed.
 
 Install the required libraries:
 
-    ```bash
+    
     pip install streamlit requests
     Set the TMDB_API_KEY environment variable with your TMDB API key.
 
@@ -74,7 +74,6 @@ Run the App:
 
 Save the script as app.py and run it using Streamlit:
 
-    bash
 
     streamlit run app.py
 
