@@ -21,19 +21,8 @@ def fetch_genres():
         st.error("Failed to fetch genres.")
         return {}
 
-def search_person(query):
-    """Search for a person (actor or director) based on user input."""
-    url = f"{TMDB_BASE_URL}/search/person"
-    response = requests.get(url, params={"api_key": TMDB_API_KEY, "query": query})
-    if response.status_code == 200:
-        results = response.json().get("results", [])
-        return {person["name"]: person["id"] for person in results}
-    else:
-        st.error("Failed to search for person.")
-        return {}
-
-def fetch_movies(genre_ids=None, actor_ids=None, director_ids=None):
-    """Fetch movies based on genre, actor, or director IDs."""
+def fetch_movies(genre_ids=None, release_date_gte=None, release_date_lte=None):
+    """Fetch movies based on genre IDs and release date range."""
     params = {
         "api_key": TMDB_API_KEY,
         "language": "en-US",
@@ -45,13 +34,11 @@ def fetch_movies(genre_ids=None, actor_ids=None, director_ids=None):
     if genre_ids:
         params["with_genres"] = ",".join(map(str, genre_ids))
 
-    # Add actor IDs if provided
-    if actor_ids:
-        params["with_cast"] = ",".join(map(str, actor_ids))
-
-    # Add director IDs if provided
-    if director_ids:
-        params["with_crew"] = ",".join(map(str, director_ids))
+    # Add release date range if provided
+    if release_date_gte:
+        params["primary_release_date.gte"] = release_date_gte
+    if release_date_lte:
+        params["primary_release_date.lte"] = release_date_lte
 
     url = f"{TMDB_BASE_URL}/discover/movie"
     response = requests.get(url, params=params)
@@ -79,58 +66,70 @@ def main():
     }
     mood_options = list(mood_to_genre.keys())
 
+    # Map movie eras to release date ranges
+    era_to_dates = {
+        "1950s": ("1950-01-01", "1959-12-31"),
+        "1960s": ("1960-01-01", "1969-12-31"),
+        "1970s": ("1970-01-01", "1979-12-31"),
+        "1980s": ("1980-01-01", "1989-12-31"),
+        "1990s": ("1990-01-01", "1999-12-31"),
+        "2000s": ("2000-01-01", "2009-12-31"),
+        "2010s": ("2010-01-01", "2019-12-31"),
+        "2020s": ("2020-01-01", "2029-12-31"),
+    }
+    era_options = list(era_to_dates.keys())
+
     # User inputs
-    selected_genres = st.multiselect("Select Genres", genre_options)
-    selected_moods = st.multiselect("Select Moods", mood_options)
-    actor_query = st.text_input("Search for Actor")
-    director_query = st.text_input("Search for Director")
+    st.sidebar.header("Filters")
+    selected_genres = st.sidebar.multiselect("Select Genres", genre_options)
+    selected_moods = st.sidebar.multiselect("Select Moods", mood_options)
+    selected_eras = st.sidebar.multiselect("Select Movie Era", era_options)
 
-    # Handle actor search
-    actor_ids = []
-    if actor_query:
-        actor_search_results = search_person(actor_query)
-        if actor_search_results:
-            selected_actor = st.selectbox("Select Actor", list(actor_search_results.keys()))
-            actor_ids.append(actor_search_results[selected_actor])
-        else:
-            st.warning("No actors found with that name.")
+    # Map selected moods to genre IDs
+    genre_ids = [genres[genre] for genre in selected_genres if genre in genres]
+    for mood in selected_moods:
+        genre_name = mood_to_genre.get(mood)
+        if genre_name and genre_name in genres:
+            genre_ids.append(genres[genre_name])
 
-    # Handle director search
-    director_ids = []
-    if director_query:
-        director_search_results = search_person(director_query)
-        if director_search_results:
-            selected_director = st.selectbox("Select Director", list(director_search_results.keys()))
-            director_ids.append(director_search_results[selected_director])
-        else:
-            st.warning("No directors found with that name.")
+    # Ensure genre IDs are unique
+    genre_ids = list(set(genre_ids))
+
+    # Map selected eras to release date ranges
+    release_date_ranges = []
+    for era in selected_eras:
+        if era in era_to_dates:
+            release_date_ranges.append(era_to_dates[era])
 
     # Fetch recommendations when the button is clicked
-    if st.button("Get Recommendations"):
-        # Map selected moods to genre IDs
-        genre_ids = [genres[genre] for genre in selected_genres if genre in genres]
-        for mood in selected_moods:
-            genre_name = mood_to_genre.get(mood)
-            if genre_name and genre_name in genres:
-                genre_ids.append(genres[genre_name])
-
-        # Ensure genre IDs are unique
-        genre_ids = list(set(genre_ids))
-
-        # Fetch movies based on inputs
-        movies = fetch_movies(genre_ids=genre_ids, actor_ids=actor_ids, director_ids=director_ids)
-
-        if movies:
-            st.write("Here are your movie recommendations:")
-            for movie in movies[:10]:  # Show top 10 results
-                st.write(f"**{movie['title']}** ({movie['release_date'][:4] if movie.get('release_date') else 'N/A'})")
-                st.write(f"Overview: {movie.get('overview', 'No overview available.')}")
-                st.write(f"Rating: {movie.get('vote_average', 'N/A')}")
-                if movie.get("poster_path"):
-                    st.image(f"https://image.tmdb.org/t/p/w500{movie['poster_path']}", width=200)
-                st.write("---")
+    if st.sidebar.button("Get Recommendations"):
+        if not genre_ids and not release_date_ranges:
+            st.warning("Please provide at least one genre, mood, or movie era to get recommendations.")
         else:
-            st.warning("No movies found matching your preferences.")
+            # Fetch movies for each release date range and combine results
+            all_movies = []
+            for release_date_gte, release_date_lte in release_date_ranges:
+                movies = fetch_movies(genre_ids=genre_ids, release_date_gte=release_date_gte, release_date_lte=release_date_lte)
+                all_movies.extend(movies)
+
+            # If no eras are selected, fetch movies without date filters
+            if not release_date_ranges:
+                all_movies = fetch_movies(genre_ids=genre_ids)
+
+            # Remove duplicates (if any)
+            unique_movies = {movie["id"]: movie for movie in all_movies}.values()
+
+            if unique_movies:
+                st.write("Here are your movie recommendations:")
+                for movie in list(unique_movies)[:10]:  # Show top 10 results
+                    st.write(f"**{movie['title']}** ({movie['release_date'][:4] if movie.get('release_date') else 'N/A'})")
+                    st.write(f"Overview: {movie.get('overview', 'No overview available.')}")
+                    st.write(f"Rating: {movie.get('vote_average', 'N/A')}")
+                    if movie.get("poster_path"):
+                        st.image(f"https://image.tmdb.org/t/p/w500{movie['poster_path']}", width=200)
+                    st.write("---")
+            else:
+                st.warning("No movies found matching your preferences.")
 
 if __name__ == "__main__":
     main()
