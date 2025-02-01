@@ -167,7 +167,7 @@ def main():
         """
         <hr>
         <p style="text-align: center;">
-            Developed by <a href="https://github.com/yourusername" target="_blank">Your Name</a>
+            Developed by <a href="https://github.com/AnnNaserNabil" target="_blank">Ann Naser Nabil</a>
         </p>
         """,
         unsafe_allow_html=True,
