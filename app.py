@@ -1,73 +1,132 @@
 import streamlit as st
 import requests
+import os
 
-# TMDB API configuration
-TMDB_API_KEY = "your_tmdb_api_key_here"  # Replace with your TMDB API key
+# Load TMDB API key from environment variable
+TMDB_API_KEY = os.getenv("TMDB_API_KEY")
+if not TMDB_API_KEY:
+    st.error("TMDB API key not found. Please set the TMDB_API_KEY environment variable.")
+    st.stop()
+
 TMDB_BASE_URL = "https://api.themoviedb.org/3"
 
-# Fetch genres from TMDB
+# Custom CSS for beautification
+st.markdown(
+    """
+    <style>
+    .stButton button {
+        background-color: #4CAF50;
+        color: white;
+        border-radius: 5px;
+        padding: 10px 20px;
+        font-size: 16px;
+    }
+    .stButton button:hover {
+        background-color: #45a049;
+    }
+    .movie-card {
+        padding: 20px;
+        border-radius: 10px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        margin-bottom: 20px;
+        background-color: #ffffff;  /* White background */
+        color: #333333;  /* Dark gray text */
+    }
+    .movie-card h3 {
+        margin-top: 0;
+        color: #4CAF50;  /* Green header */
+    }
+    .movie-card p {
+        color: #333333;  /* Dark gray text */
+    }
+    .movie-card img {
+        border-radius: 10px;
+    }
+    .stHeader {
+        font-size: 36px;
+        font-weight: bold;
+        color: #4CAF50;  /* Green header */
+    }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
+
 def fetch_genres():
-    url = f"{TMDB_BASE_URL}/genre/movie/list?api_key={TMDB_API_KEY}"
-    response = requests.get(url)
+    """Fetch list of genres from TMDB API."""
+    url = f"{TMDB_BASE_URL}/genre/movie/list"
+    response = requests.get(url, params={"api_key": TMDB_API_KEY, "language": "en-US"})
     if response.status_code == 200:
         genres = response.json().get("genres", [])
-        return {genre["name"]: genre["id"] for genre in genres}
+        return {g["name"]: g["id"] for g in genres}
     else:
-        st.error("Failed to fetch genres from TMDB.")
+        st.error("Failed to fetch genres.")
         return {}
 
-# Fetch movies based on filters
 def fetch_movies(genre_ids=None, release_date_gte=None, release_date_lte=None):
-    url = f"{TMDB_BASE_URL}/discover/movie?api_key={TMDB_API_KEY}"
+    """Fetch movies based on genre IDs and release date range."""
+    params = {
+        "api_key": TMDB_API_KEY,
+        "language": "en-US",
+        "sort_by": "popularity.desc",
+        "include_adult": False,
+    }
+
+    # Add genre IDs if provided
     if genre_ids:
-        url += f"&with_genres={','.join(map(str, genre_ids))}"
+        params["with_genres"] = ",".join(map(str, genre_ids))
+
+    # Add release date range if provided
     if release_date_gte:
-        url += f"&release_date.gte={release_date_gte}"
+        params["primary_release_date.gte"] = release_date_gte
     if release_date_lte:
-        url += f"&release_date.lte={release_date_lte}"
-    response = requests.get(url)
+        params["primary_release_date.lte"] = release_date_lte
+
+    url = f"{TMDB_BASE_URL}/discover/movie"
+    response = requests.get(url, params=params)
     if response.status_code == 200:
         return response.json().get("results", [])
     else:
-        st.error("Failed to fetch movies from TMDB.")
+        st.error("Failed to fetch movie recommendations.")
         return []
 
-# Fetch movie details (top 5 actors, director, and best review)
 def fetch_movie_details(movie_id):
+    """Fetch additional details (credits and reviews) for a movie."""
+    credits_url = f"{TMDB_BASE_URL}/movie/{movie_id}/credits"
+    reviews_url = f"{TMDB_BASE_URL}/movie/{movie_id}/reviews"
+
     # Fetch credits
-    credits_url = f"{TMDB_BASE_URL}/movie/{movie_id}/credits?api_key={TMDB_API_KEY}"
-    credits_response = requests.get(credits_url)
-    top_actors = []
-    director = None
-    if credits_response.status_code == 200:
-        credits = credits_response.json()
-        top_actors = [actor["name"] for actor in credits.get("cast", [])[:5]]
-        director = next((member["name"] for member in credits.get("crew", []) if member["job"] == "Director"), None)
+    credits_response = requests.get(credits_url, params={"api_key": TMDB_API_KEY})
+    if credits_response.status_code != 200:
+        st.error(f"Failed to fetch credits for movie ID {movie_id}.")
+        return None, None
 
     # Fetch reviews
-    reviews_url = f"{TMDB_BASE_URL}/movie/{movie_id}/reviews?api_key={TMDB_API_KEY}"
-    reviews_response = requests.get(reviews_url)
+    reviews_response = requests.get(reviews_url, params={"api_key": TMDB_API_KEY})
+    if reviews_response.status_code != 200:
+        st.error(f"Failed to fetch reviews for movie ID {movie_id}.")
+        return None, None
+
+    credits = credits_response.json()
+    reviews = reviews_response.json().get("results", [])
+
+    # Extract top 5 actors and director
+    cast = credits.get("cast", [])
+    crew = credits.get("crew", [])
+    top_actors = [actor["name"] for actor in cast[:5]]  # Top 5 actors
+    director = next((member["name"] for member in crew if member["job"] == "Director"), None)
+
+    # Find the best-written review (highest-rated review)
     best_review = None
-    if reviews_response.status_code == 200:
-        reviews = reviews_response.json().get("results", [])
-        if reviews:
-            best_review = max(reviews, key=lambda x: x.get("author_details", {}).get("rating", 0))
+    if reviews:
+        best_review = max(reviews, key=lambda x: x.get("author_details", {}).get("rating", 0))
 
     return top_actors, director, best_review
 
-# Main function
 def main():
     # Title and header
-    st.markdown(
-        """
-        <h1 class='stHeader' style='color: red;'>
-            🎬 Let's Watch<br>
-            The ultimate movie recommendation system!
-        </h1>
-        """,
-        unsafe_allow_html=True,
-    )
-    st.write("Select your preferences below and get personalized movie recommendations.")
+    st.markdown("<h1 class='stHeader'>🎬 Movie Recommendation System</h1>", unsafe_allow_html=True)
+    st.write("Welcome to the ultimate movie recommendation system! Select your preferences below and get personalized movie recommendations.")
 
     # Fetch genres from TMDB
     genres = fetch_genres()
@@ -148,30 +207,19 @@ def main():
                         st.markdown(
                             f"""
                             <div class="movie-card">
-                                {f"<img src='https://image.tmdb.org/t/p/w500{movie['poster_path']}' width='200' />" if movie.get("poster_path") else ""}
                                 <h3>{movie['title']} ({movie['release_date'][:4] if movie.get('release_date') else 'N/A'})</h3>
                                 <p><strong>Overview:</strong> {movie.get('overview', 'No overview available.')}</p>
                                 <p><strong>Rating:</strong> ⭐ {movie.get('vote_average', 'N/A')}</p>
                                 <p><strong>Top 5 Actors:</strong> {', '.join(top_actors) if top_actors else 'N/A'}</p>
                                 <p><strong>Director:</strong> {director if director else 'N/A'}</p>
                                 <p><strong>Best Review:</strong> {best_review['content'] if best_review else 'No reviews available.'}</p>
+                                {f"<img src='https://image.tmdb.org/t/p/w500{movie['poster_path']}' width='200' />" if movie.get("poster_path") else ""}
                             </div>
                             """,
                             unsafe_allow_html=True,
                         )
             else:
                 st.warning("No movies found matching your preferences.")
-
-    # Add developer's URL
-    st.sidebar.markdown(
-        """
-        <hr>
-        <p style="text-align: center;">
-            Developed by <a href="https://github.com/AnnNaserNabil" target="_blank">Ann Naser Nabil</a>
-        </p>
-        """,
-        unsafe_allow_html=True,
-    )
 
 if __name__ == "__main__":
     main()
