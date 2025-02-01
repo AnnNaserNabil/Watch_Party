@@ -43,23 +43,23 @@ def fetch_movies(genre_id=None, actor_id=None, director_id=None):
 
 def main():
     st.title("Movie Recommendation System")
-    st.write("Start typing to get suggestions for genre, actor, or director.")
+    st.write("Start typing a word to get suggestions for actors, directors, moods, or genres.")
     
     genres = fetch_genres()
-    genre = st.selectbox("Select Genre", [""] + list(genres.keys()))
+    query = st.text_input("Search for a Movie, Actor, Director, or Mood")
     
-    actor_query = st.text_input("Search for an Actor")
-    actor_options = list(search_person(actor_query).keys()) if actor_query else []
-    actor = st.selectbox("Select Actor", [""] + actor_options)
+    actor_options = list(search_person(query).keys()) if query else []
+    director_options = list(search_person(query).keys()) if query else []
+    genre_options = [g for g in genres.keys() if query.lower() in g.lower()]
+    mood_to_genre = {"happy": "Comedy", "sad": "Drama", "excited": "Action", "romantic": "Romance", "scared": "Horror"}
+    mood_options = [mood for mood in mood_to_genre.keys() if query.lower() in mood]
     
-    director_query = st.text_input("Search for a Director")
-    director_options = list(search_person(director_query).keys()) if director_query else []
-    director = st.selectbox("Select Director", [""] + director_options)
+    selected_option = st.selectbox("Suggestions", [""] + actor_options + director_options + genre_options + mood_options)
     
-    if st.button("Get Recommendations"):
-        genre_id = genres.get(genre)
-        actor_id = search_person(actor).get(actor) if actor else None
-        director_id = search_person(director).get(director) if director else None
+    if st.button("Get Recommendations") and selected_option:
+        genre_id = genres.get(selected_option) or genres.get(mood_to_genre.get(selected_option, ""))
+        actor_id = search_person(selected_option).get(selected_option)
+        director_id = search_person(selected_option).get(selected_option)
         
         movies = fetch_movies(genre_id=genre_id, actor_id=actor_id, director_id=director_id)
         
