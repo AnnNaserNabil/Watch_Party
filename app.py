@@ -162,6 +162,11 @@ def main():
     selected_moods = st.sidebar.multiselect("Select Moods 😃", mood_options)
     selected_eras = st.sidebar.multiselect("Select Movie Era 📅", era_options)
 
+    # Developer URL in the sidebar
+    st.sidebar.markdown("---")
+    st.sidebar.markdown("### Developed By")
+    st.sidebar.markdown("[Ann Naser Nabil](https://github.com/AnnNaserNabil)")
+
     # Map selected moods to genre IDs
     genre_ids = [genres[genre] for genre in selected_genres if genre in genres]
     for mood in selected_moods:
