@@ -48,10 +48,6 @@ The movie poster at the top.
 
 Title, release year, overview, rating, top actors, director, and the best review.
 
-## 🎥 Example Output
-Here’s what a movie recommendation looks like:
-
-<div class="movie-card"> <img src="https://image.tmdb.org/t/p/w500/example_poster_path.jpg" width="200" /> <h3>Movie Title (2023)</h3> <p><strong>Overview:</strong> A brief description of the movie's plot.</p> <p><strong>Rating:</strong> ⭐ 8.5</p> <p><strong>Top 5 Actors:</strong> Actor 1, Actor 2, Actor 3, Actor 4, Actor 5</p> <p><strong>Director:</strong> Director Name</p> <p><strong>Best Review:</strong> "This movie is a masterpiece! Highly recommended."</p> </div>
 
 ## 🚀 Technologies Used
 Streamlit: For building the interactive web app.
